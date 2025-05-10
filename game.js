@@ -178,10 +178,12 @@ function update() {
 }
 
 function draw() {
-  drawBackground();
-  drawGround(); // обязательно до труб
-  drawPipes();
-  drawBird();
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // ⬅️ Очищаем холст
+  
+    drawBackground();
+    drawGround();
+    drawPipes();
+    drawBird();
 
   if (gameState === STATE.START) {
     drawText('Tap to Start', 28);
@@ -230,5 +232,7 @@ document.addEventListener('keydown', e => {
 canvas.addEventListener('click', flap);
 canvas.addEventListener('touchstart', flap);
 
-reset();
-loop();
+bg.onload = () => {
+    reset();
+    loop();
+  };  
