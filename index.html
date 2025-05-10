@@ -9,6 +9,13 @@
 </head>
 <body>
   <canvas id="gameCanvas" width="320" height="480"></canvas>
+
+  <script>
+    // Telegram SDK инициализация
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand(); // делает fullscreen
+  </script>
+
   <script src="game.js"></script>
 </body>
 </html>
