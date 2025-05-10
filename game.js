@@ -50,6 +50,11 @@ const STATE = {
   GAMEOVER: 'gameover',
 };
 
+// FPS ограничение
+const FPS = 30;
+const FRAME_INTERVAL = 1000 / FPS;
+let lastFrameTime = 0;
+
 function reset() {
   bird = {
     x: 60,
@@ -178,12 +183,12 @@ function update() {
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // ⬅️ Очищаем холст
-  
-    drawBackground();
-    drawGround();
-    drawPipes();
-    drawBird();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawBackground();
+  drawGround();
+  drawPipes();
+  drawBird();
 
   if (gameState === STATE.START) {
     drawText('Tap to Start', 28);
@@ -206,10 +211,14 @@ function draw() {
   }
 }
 
-function loop() {
-  update();
-  draw();
-  frame++;
+// Ограниченный по FPS цикл
+function loop(timestamp) {
+  if (!lastFrameTime || timestamp - lastFrameTime >= FRAME_INTERVAL) {
+    update();
+    draw();
+    frame++;
+    lastFrameTime = timestamp;
+  }
   requestAnimationFrame(loop);
 }
 
@@ -233,6 +242,6 @@ canvas.addEventListener('click', flap);
 canvas.addEventListener('touchstart', flap);
 
 bg.onload = () => {
-    reset();
-    loop();
-  };  
+  reset();
+  requestAnimationFrame(loop);
+};
