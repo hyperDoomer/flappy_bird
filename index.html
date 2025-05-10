@@ -11,9 +11,15 @@
   <canvas id="gameCanvas" width="320" height="480"></canvas>
 
   <script>
-    // Telegram SDK инициализация
-    window.Telegram.WebApp.ready();
-    window.Telegram.WebApp.expand(); // делает fullscreen
+    window.addEventListener("DOMContentLoaded", () => {
+      if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+        console.log("✅ Telegram WebApp initialized");
+      } else {
+        console.warn("⚠️ Telegram WebApp SDK not available");
+      }
+    });
   </script>
 
   <script src="game.js"></script>
