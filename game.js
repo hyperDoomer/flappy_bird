@@ -1,12 +1,11 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Фон и земля
+// Изображения
 const bg = new Image();
 bg.src = 'background-loop.png';
 const groundImg = new Image();
 groundImg.src = 'ground-loop.png';
-
 const birdImg = new Image();
 birdImg.src = 'bird.png';
 const pipeTop = new Image();
@@ -34,7 +33,7 @@ const PIPE_VISIBLE_WIDTH = 36;
 const HITBOX_MARGIN = (PIPE_WIDTH - PIPE_VISIBLE_WIDTH) / 2;
 const PIPE_SRC_WIDTH = 120;
 
-const PARALLAX_SPEED = 0.5;
+const PARALLAX_SPEED = 0; // отключено
 const GROUND_SPEED = 0;
 const GROUND_HEIGHT = 20;
 
@@ -49,11 +48,6 @@ const STATE = {
   PLAYING: 'playing',
   GAMEOVER: 'gameover',
 };
-
-// FPS ограничение
-const FPS = 30;
-const FRAME_INTERVAL = 1000 / FPS;
-let lastFrameTime = 0;
 
 function reset() {
   bird = {
@@ -72,41 +66,32 @@ function reset() {
 
 function drawBackground() {
   parallaxX = (parallaxX - PARALLAX_SPEED) % (bg.width / 2);
-  ctx.drawImage(bg, parallaxX, 0, bg.width / 2, canvas.height);
-  ctx.drawImage(bg, parallaxX + bg.width / 2, 0, bg.width / 2, canvas.height);
+  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 }
 
 function drawGround() {
-  groundX = (groundX - GROUND_SPEED) % (groundImg.width / 2);
-  ctx.drawImage(groundImg, groundX, canvas.height - GROUND_HEIGHT, groundImg.width / 2, GROUND_HEIGHT);
-  ctx.drawImage(groundImg, groundX + groundImg.width / 2, canvas.height - GROUND_HEIGHT, groundImg.width / 2, GROUND_HEIGHT);
+  ctx.drawImage(groundImg, 0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 }
 
 function drawBird() {
   ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
   if (DEBUG) {
     ctx.strokeStyle = 'red';
-    ctx.lineWidth = 1;
     ctx.strokeRect(bird.x, bird.y, bird.width, bird.height);
   }
 }
 
 function drawPipes() {
   pipes.forEach(pipe => {
-    ctx.drawImage(
-      pipeTop,
-      (pipeTop.width - PIPE_SRC_WIDTH) / 2, 0, PIPE_SRC_WIDTH, pipeTop.height,
-      pipe.x, 0, PIPE_WIDTH, pipe.top
-    );
+    ctx.drawImage(pipeTop, pipe.x, 0, PIPE_WIDTH, pipe.top);
     ctx.drawImage(
       pipeBottom,
-      (pipeBottom.width - PIPE_SRC_WIDTH) / 2, 0, PIPE_SRC_WIDTH, pipeBottom.height,
-      pipe.x, pipe.top + PIPE_GAP, PIPE_WIDTH, canvas.height - pipe.top - PIPE_GAP - GROUND_HEIGHT
+      pipe.x, pipe.top + PIPE_GAP, PIPE_WIDTH,
+      canvas.height - pipe.top - PIPE_GAP - GROUND_HEIGHT
     );
 
     if (DEBUG) {
       ctx.strokeStyle = 'blue';
-      ctx.lineWidth = 1;
       ctx.strokeRect(pipe.x + HITBOX_MARGIN, 0, PIPE_VISIBLE_WIDTH, pipe.top);
       ctx.strokeRect(pipe.x + HITBOX_MARGIN, pipe.top + PIPE_GAP, PIPE_VISIBLE_WIDTH, canvas.height - pipe.top - PIPE_GAP - GROUND_HEIGHT);
     }
@@ -184,7 +169,6 @@ function update() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   drawBackground();
   drawGround();
   drawPipes();
@@ -211,14 +195,10 @@ function draw() {
   }
 }
 
-// Ограниченный по FPS цикл
-function loop(timestamp) {
-  if (!lastFrameTime || timestamp - lastFrameTime >= FRAME_INTERVAL) {
-    update();
-    draw();
-    frame++;
-    lastFrameTime = timestamp;
-  }
+function loop() {
+  update();
+  draw();
+  frame++;
   requestAnimationFrame(loop);
 }
 
@@ -243,5 +223,5 @@ canvas.addEventListener('touchstart', flap);
 
 bg.onload = () => {
   reset();
-  requestAnimationFrame(loop);
+  loop();
 };
