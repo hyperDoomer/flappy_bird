@@ -1,0 +1,34 @@
+# macOS system files
+.DS_Store
+
+# node modules (если используешь какие-либо)
+node_modules/
+
+# build / dist folders
+dist/
+build/
+
+# лог файлы
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# файлы IDE
+.vscode/
+.idea/
+
+# системные или временные файлы
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+
+# кэш браузеров/инструментов
+.cache/
+.parcel-cache/
+.env
+
+# изображения и звуки (если не хочешь их коммитить)
+# /sounds/
+# /img/
