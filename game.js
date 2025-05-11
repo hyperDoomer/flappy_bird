@@ -1,11 +1,19 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
 
-// Изображения
+// Определение слабого окружения (Telegram Desktop с WebView на Edge)
+const isEdgeWebView = (() => {
+  const ua = navigator.userAgent || '';
+  return /Telegram/i.test(ua) && /Edg\//i.test(ua);
+})();
+
+// Фон и земля
 const bg = new Image();
 bg.src = 'background-loop.png';
 const groundImg = new Image();
 groundImg.src = 'ground-loop.png';
+
 const birdImg = new Image();
 birdImg.src = 'bird.png';
 const pipeTop = new Image();
@@ -17,6 +25,12 @@ const flapSound = new Audio('flap.mp3');
 const pointSound = new Audio('score.mp3');
 const hitSound = new Audio('hit.mp3');
 const clickSound = new Audio('click.mp3');
+
+// Прогрев звуков
+[flapSound, pointSound, hitSound, clickSound].forEach(sound => {
+  sound.preload = 'auto';
+  sound.load();
+});
 
 // Настройки
 canvas.width = 320;
@@ -33,7 +47,7 @@ const PIPE_VISIBLE_WIDTH = 36;
 const HITBOX_MARGIN = (PIPE_WIDTH - PIPE_VISIBLE_WIDTH) / 2;
 const PIPE_SRC_WIDTH = 120;
 
-const PARALLAX_SPEED = 0; // отключено
+const PARALLAX_SPEED = isEdgeWebView ? 0 : 0.5;
 const GROUND_SPEED = 0;
 const GROUND_HEIGHT = 20;
 
@@ -65,33 +79,46 @@ function reset() {
 }
 
 function drawBackground() {
-  parallaxX = (parallaxX - PARALLAX_SPEED) % (bg.width / 2);
-  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+  if (PARALLAX_SPEED === 0) {
+    ctx.drawImage(bg, 0, 0, bg.width / 2, canvas.height);
+  } else {
+    parallaxX = (parallaxX - PARALLAX_SPEED) % (bg.width / 2);
+    ctx.drawImage(bg, parallaxX, 0, bg.width / 2, canvas.height);
+    ctx.drawImage(bg, parallaxX + bg.width / 2, 0, bg.width / 2, canvas.height);
+  }
 }
 
 function drawGround() {
-  ctx.drawImage(groundImg, 0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+  groundX = (groundX - GROUND_SPEED) % (groundImg.width / 2);
+  ctx.drawImage(groundImg, groundX, canvas.height - GROUND_HEIGHT, groundImg.width / 2, GROUND_HEIGHT);
+  ctx.drawImage(groundImg, groundX + groundImg.width / 2, canvas.height - GROUND_HEIGHT, groundImg.width / 2, GROUND_HEIGHT);
 }
 
 function drawBird() {
   ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
   if (DEBUG) {
     ctx.strokeStyle = 'red';
+    ctx.lineWidth = 1;
     ctx.strokeRect(bird.x, bird.y, bird.width, bird.height);
   }
 }
 
 function drawPipes() {
   pipes.forEach(pipe => {
-    ctx.drawImage(pipeTop, pipe.x, 0, PIPE_WIDTH, pipe.top);
+    ctx.drawImage(
+      pipeTop,
+      (pipeTop.width - PIPE_SRC_WIDTH) / 2, 0, PIPE_SRC_WIDTH, pipeTop.height,
+      pipe.x, 0, PIPE_WIDTH, pipe.top
+    );
     ctx.drawImage(
       pipeBottom,
-      pipe.x, pipe.top + PIPE_GAP, PIPE_WIDTH,
-      canvas.height - pipe.top - PIPE_GAP - GROUND_HEIGHT
+      (pipeBottom.width - PIPE_SRC_WIDTH) / 2, 0, PIPE_SRC_WIDTH, pipeBottom.height,
+      pipe.x, pipe.top + PIPE_GAP, PIPE_WIDTH, canvas.height - pipe.top - PIPE_GAP - GROUND_HEIGHT
     );
 
     if (DEBUG) {
       ctx.strokeStyle = 'blue';
+      ctx.lineWidth = 1;
       ctx.strokeRect(pipe.x + HITBOX_MARGIN, 0, PIPE_VISIBLE_WIDTH, pipe.top);
       ctx.strokeRect(pipe.x + HITBOX_MARGIN, pipe.top + PIPE_GAP, PIPE_VISIBLE_WIDTH, canvas.height - pipe.top - PIPE_GAP - GROUND_HEIGHT);
     }
@@ -101,9 +128,13 @@ function drawPipes() {
 function drawText(text, size, offsetY = 0) {
   ctx.font = `${size}px Arial`;
   ctx.textAlign = 'center';
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = 'white';
-  ctx.strokeText(text, canvas.width / 2, canvas.height / 2 + offsetY);
+
+  if (!isEdgeWebView) {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'white';
+    ctx.strokeText(text, canvas.width / 2, canvas.height / 2 + offsetY);
+  }
+
   ctx.fillStyle = 'black';
   ctx.fillText(text, canvas.width / 2, canvas.height / 2 + offsetY);
 }
@@ -111,9 +142,13 @@ function drawText(text, size, offsetY = 0) {
 function drawScore() {
   ctx.font = '20px Arial';
   ctx.textAlign = 'center';
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = 'white';
-  ctx.strokeText(`Score: ${score}`, canvas.width / 2, 30);
+
+  if (!isEdgeWebView) {
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'white';
+    ctx.strokeText(`Score: ${score}`, canvas.width / 2, 30);
+  }
+
   ctx.fillStyle = 'black';
   ctx.fillText(`Score: ${score}`, canvas.width / 2, 30);
 }
@@ -180,7 +215,7 @@ function draw() {
     drawText('Game Over', 32, -30);
     drawText(`Score: ${score}`, 26, 10);
 
-    if (isNewRecord) {
+    if (isNewRecord && !isEdgeWebView) {
       const hue = (frame * 2) % 360;
       ctx.font = '22px Arial';
       ctx.textAlign = 'center';
@@ -195,11 +230,17 @@ function draw() {
   }
 }
 
+// Адаптивный цикл: 60fps обычно, 30fps в Edge WebView
 function loop() {
   update();
   draw();
   frame++;
-  requestAnimationFrame(loop);
+
+  if (isEdgeWebView) {
+    setTimeout(() => requestAnimationFrame(loop), 1000 / 30);
+  } else {
+    requestAnimationFrame(loop);
+  }
 }
 
 function flap() {
