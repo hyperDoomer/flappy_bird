@@ -79,14 +79,14 @@ function reset() {
 }
 
 function drawBackground() {
-  if (PARALLAX_SPEED === 0) {
-    ctx.drawImage(bg, 0, 0, bg.width / 2, canvas.height);
-  } else {
-    parallaxX = (parallaxX - PARALLAX_SPEED) % (bg.width / 2);
-    ctx.drawImage(bg, parallaxX, 0, bg.width / 2, canvas.height);
-    ctx.drawImage(bg, parallaxX + bg.width / 2, 0, bg.width / 2, canvas.height);
-  }
-}
+    if (isEdgeWebView) {
+      ctx.drawImage(bg, 0, 0, bg.width / 2, canvas.height);
+    } else {
+      parallaxX = (parallaxX - PARALLAX_SPEED) % (bg.width / 2);
+      ctx.drawImage(bg, parallaxX, 0, bg.width / 2, canvas.height);
+      ctx.drawImage(bg, parallaxX + bg.width / 2, 0, bg.width / 2, canvas.height);
+    }
+  }  
 
 function drawGround() {
   groundX = (groundX - GROUND_SPEED) % (groundImg.width / 2);
