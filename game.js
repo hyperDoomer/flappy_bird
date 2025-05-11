@@ -1,10 +1,8 @@
+// Flappy Bird с визуальными эффектами скорости и без проверки Telegram
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
-
-const isTelegram = typeof Telegram !== 'undefined' && Telegram.WebApp;
-const platform = isTelegram ? Telegram.WebApp.platform : null;
-const isEdgeWebView = isTelegram && platform === 'tdesktop' && /Edg\//.test(navigator.userAgent);
 
 const bg = new Image();
 bg.src = 'background-loop.png';
@@ -22,27 +20,22 @@ const pointSound = new Audio('score.mp3');
 const hitSound = new Audio('hit.mp3');
 const clickSound = new Audio('click.mp3');
 
-[flapSound, pointSound, hitSound, clickSound].forEach(s => {
-  s.preload = 'auto';
-  s.load();
-});
-
 canvas.width = 320;
 canvas.height = 480;
 
-const DEBUG = true;
-const GRAVITY = 0.10;
-const FLAP = -3.8;
-const PIPE_GAP = 150;
-const SPEED = 1.5;
-const PIPE_INTERVAL = 200;
+const DEBUG = false;
+const GRAVITY = 0.12;
+const FLAP = -5.0;
+const PIPE_GAP = 140;
+const SPEED = 2.0;
+const PIPE_INTERVAL = 180;
 const PIPE_WIDTH = 50;
 const PIPE_VISIBLE_WIDTH = 36;
 const HITBOX_MARGIN = (PIPE_WIDTH - PIPE_VISIBLE_WIDTH) / 2;
 const PIPE_SRC_WIDTH = 120;
 
-const PARALLAX_SPEED = isEdgeWebView ? 0 : 0.5;
-const GROUND_SPEED = 0;
+const PARALLAX_SPEED = 1.2;
+const GROUND_SPEED = 1.8;
 const GROUND_HEIGHT = 20;
 
 let bird, pipes, score, gameState, frame;
@@ -50,6 +43,7 @@ let highScore = localStorage.getItem('highScore') || 0;
 let isNewRecord = false;
 let parallaxX = 0;
 let groundX = 0;
+let birdRotation = 0;
 
 const STATE = {
   START: 'start',
@@ -69,17 +63,14 @@ function reset() {
   score = 0;
   frame = 0;
   isNewRecord = false;
+  birdRotation = 0;
   gameState = STATE.START;
 }
 
 function drawBackground() {
-  if (isEdgeWebView) {
-    ctx.drawImage(bg, 0, 0, bg.width / 2, canvas.height);
-  } else {
-    parallaxX = (parallaxX - PARALLAX_SPEED) % (bg.width / 2);
-    ctx.drawImage(bg, parallaxX, 0, bg.width / 2, canvas.height);
-    ctx.drawImage(bg, parallaxX + bg.width / 2, 0, bg.width / 2, canvas.height);
-  }
+  parallaxX = (parallaxX - PARALLAX_SPEED) % (bg.width / 2);
+  ctx.drawImage(bg, parallaxX, 0, bg.width / 2, canvas.height);
+  ctx.drawImage(bg, parallaxX + bg.width / 2, 0, bg.width / 2, canvas.height);
 }
 
 function drawGround() {
@@ -89,7 +80,12 @@ function drawGround() {
 }
 
 function drawBird() {
-  ctx.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+  ctx.save();
+  ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
+  ctx.rotate(birdRotation);
+  ctx.drawImage(birdImg, -bird.width / 2, -bird.height / 2, bird.width, bird.height);
+  ctx.restore();
+
   if (DEBUG) {
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 1;
@@ -99,8 +95,16 @@ function drawBird() {
 
 function drawPipes() {
   pipes.forEach(pipe => {
-    ctx.drawImage(pipeTop, (pipeTop.width - PIPE_SRC_WIDTH) / 2, 0, PIPE_SRC_WIDTH, pipeTop.height, pipe.x, 0, PIPE_WIDTH, pipe.top);
-    ctx.drawImage(pipeBottom, (pipeBottom.width - PIPE_SRC_WIDTH) / 2, 0, PIPE_SRC_WIDTH, pipeBottom.height, pipe.x, pipe.top + PIPE_GAP, PIPE_WIDTH, canvas.height - pipe.top - PIPE_GAP - GROUND_HEIGHT);
+    ctx.drawImage(
+      pipeTop,
+      (pipeTop.width - PIPE_SRC_WIDTH) / 2, 0, PIPE_SRC_WIDTH, pipeTop.height,
+      pipe.x, 0, PIPE_WIDTH, pipe.top
+    );
+    ctx.drawImage(
+      pipeBottom,
+      (pipeBottom.width - PIPE_SRC_WIDTH) / 2, 0, PIPE_SRC_WIDTH, pipeBottom.height,
+      pipe.x, pipe.top + PIPE_GAP, PIPE_WIDTH, canvas.height - pipe.top - PIPE_GAP - GROUND_HEIGHT
+    );
 
     if (DEBUG) {
       ctx.strokeStyle = 'blue';
@@ -114,13 +118,6 @@ function drawPipes() {
 function drawText(text, size, offsetY = 0) {
   ctx.font = `${size}px Arial`;
   ctx.textAlign = 'center';
-
-  if (!isEdgeWebView) {
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'white';
-    ctx.strokeText(text, canvas.width / 2, canvas.height / 2 + offsetY);
-  }
-
   ctx.fillStyle = 'black';
   ctx.fillText(text, canvas.width / 2, canvas.height / 2 + offsetY);
 }
@@ -128,13 +125,6 @@ function drawText(text, size, offsetY = 0) {
 function drawScore() {
   ctx.font = '20px Arial';
   ctx.textAlign = 'center';
-
-  if (!isEdgeWebView) {
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'white';
-    ctx.strokeText(`Score: ${score}`, canvas.width / 2, 30);
-  }
-
   ctx.fillStyle = 'black';
   ctx.fillText(`Score: ${score}`, canvas.width / 2, 30);
 }
@@ -144,6 +134,7 @@ function update() {
 
   bird.velocity += GRAVITY;
   bird.y += bird.velocity;
+  birdRotation = Math.min(Math.max(-0.6, bird.velocity * 0.05), 1);
 
   if (frame % PIPE_INTERVAL === 0) {
     const top = Math.floor(Math.random() * (canvas.height - PIPE_GAP - GROUND_HEIGHT - 60)) + 40;
@@ -188,24 +179,6 @@ function update() {
   }
 }
 
-// FPS мониторинг
-let frameTime = 0;
-let lastFpsUpdate = 0;
-let framesThisSecond = 0;
-let fps = 0;
-let lastFrameTime = performance.now();
-const frameTimes = [];
-const MAX_FRAME_SAMPLES = 60;
-
-function drawDebugOverlay() {
-  if (!DEBUG) return;
-  ctx.font = '12px monospace';
-  ctx.fillStyle = '#000';
-  ctx.textAlign = 'right';
-  ctx.fillText(`FPS: ${fps}`, canvas.width - 5, 15);
-  ctx.fillText(`Avg: ${frameTime.toFixed(1)}ms`, canvas.width - 5, 30);
-}
-
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground();
@@ -218,44 +191,17 @@ function draw() {
   } else if (gameState === STATE.GAMEOVER) {
     drawText('Game Over', 32, -30);
     drawText(`Score: ${score}`, 26, 10);
-
-    if (isNewRecord && !isEdgeWebView) {
-      const hue = (frame * 2) % 360;
-      ctx.font = '22px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
-      ctx.fillText('🎉 New Record! 🎉', canvas.width / 2, canvas.height / 2 + 45);
-    }
-
     drawText(`High Score: ${highScore}`, 20, 80);
     drawText('Tap to Restart', 20, 120);
   } else {
     drawScore();
   }
-
-  drawDebugOverlay();
 }
 
-function loop(currentTime = performance.now()) {
-  const delta = currentTime - lastFrameTime;
-  lastFrameTime = currentTime;
-
-  frameTimes.push(delta);
-  if (frameTimes.length > MAX_FRAME_SAMPLES) frameTimes.shift();
-  const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
-  frameTime = avgFrameTime;
-
+function loop() {
   update();
   draw();
   frame++;
-
-  if (currentTime - lastFpsUpdate > 1000) {
-    fps = framesThisSecond;
-    framesThisSecond = 0;
-    lastFpsUpdate = currentTime;
-  }
-  framesThisSecond++;
-
   requestAnimationFrame(loop);
 }
 
